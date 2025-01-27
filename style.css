@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css?family={{googleFont}}:100,200,300,400,500,600,700,800,900');
+/* @import url('https://fonts.googleapis.com/css?family={{googleFont}}:100,200,300,400,500,600,700,800,900'); */
 
 * {
 	margin: 0;
 	padding: 0;
 	background-color: #1f1f1f;
-	font-size: 12px;
 	font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 	color: rgb(235, 235, 235);
 }
@@ -28,6 +27,22 @@
 	transform: translate(-50%, -50%);
 }
 
+#instructionsContainer {
+	font-size: 20px;
+	font-weight: bold;
+	opacity: 0.9;
+	border-radius: 10px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+}
+
+.hyperlinks {
+	color: rgb(79, 92, 212);
+}
+
 #mainContainer
 {
 	text-transform: uppercase;
@@ -35,6 +50,7 @@
 	margin-left: auto;
 	margin-right: auto;
 	padding: 20px;
+	font-size: 12px;
 }
 
 .disabled

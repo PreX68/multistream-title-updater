@@ -3,8 +3,6 @@
 ////////////
 
 let sbDebugMode = true;
-let googleFont = "Open Sans";
-let customFont = "";
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
@@ -36,7 +34,6 @@ function connectws() {
 		// Connect
 		ws.onopen = async function () {
 			SetConnectionStatus(true);
-			LoadFont();
 
 			console.log("Subscribe to events");
 			ws.send(
@@ -62,12 +59,27 @@ function connectws() {
 				})
 			);
 
-			sbFetchBroadcasts(ws);
+			sbGetActions(ws);
 
 			ws.onmessage = function (event) {
 				// Grab message and parse JSON
 				const msg = event.data;
 				const wsdata = JSON.parse(msg);
+
+				// Check if the user installed all the required Streamer.bot actions
+				if (wsdata.id == "GetActions") {
+
+					// Check if all the required SB action exist
+					ReadLinesFromFile('requiredActions.txt')
+						.then(requiredActions => {
+							if (sbCheckRequiredActions(wsdata.actions, requiredActions)) {
+								SetElementVisibility("missingActionsInstructions", false);
+								sbFetchBroadcasts(ws);
+							}
+							else
+								SetElementVisibility("missingActionsInstructions", true);
+						})
+				}
 
 				if (typeof wsdata.event == "undefined") {
 					return;
@@ -124,6 +136,27 @@ function connectws() {
 /////////////////////////
 // STREAMER.BOT WIDGET //
 /////////////////////////
+
+function sbGetActions(ws) {
+
+	let request = JSON.stringify({
+		request: "GetActions",
+		id: "GetActions"
+	});
+
+	ws.send(request);
+}
+
+// Check if all the entries in targetActionNames exist in actionList
+function sbCheckRequiredActions(actionList, targetActionNames) {
+	let foundActions = 0;
+	for (targetActionName of targetActionNames) {
+		if (actionList.some(action => action.name === targetActionName))
+			foundActions++;
+	}
+
+	return foundActions == targetActionNames.length
+}
 
 function sbFetchBroadcasts(ws) {
 
@@ -192,10 +225,6 @@ function sbUpdateYouTubeTitle(ws, title, broadcastId) {
 // HELPER FUNCTIONS //
 //////////////////////
 
-function LoadFont() {
-	document.body.style.fontFamily = IsNullOrWhitespace(customFont) ? googleFont : customFont;
-}
-
 function generateUUID() { // Public Domain/MIT
 	var d = new Date().getTime();//Timestamp
 	var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
@@ -216,6 +245,32 @@ function IsNullOrWhitespace(str) {
 	return /^\s*$/.test(str);
 }
 
+function SetElementVisibility(elementID, visibility) {
+	let element = document.getElementById(elementID);
+	if (visibility)
+		element.style.display = 'inline';
+	else
+		element.style.display = 'none';
+}
+
+function ReadLinesFromFile(filePath) {
+	return new Promise((resolve, reject) => {
+		const request = new XMLHttpRequest();
+		request.open('GET', filePath, true);
+		request.onload = function () {
+			if (request.status === 200) {
+				resolve(request.responseText.split(/\r?\n/));
+			} else {
+				reject(new Error(`File loading failed with status: ${request.status}`));
+			}
+		};
+		request.onerror = function () {
+			reject(new Error('Network error occurred during file loading.'));
+		};
+		request.send();
+	});
+}
+
 
 
 ///////////////////////////////////
@@ -226,17 +281,18 @@ function IsNullOrWhitespace(str) {
 function SetConnectionStatus(connected) {
 	let connectionStatusIcon = document.getElementById("connectionStatusIcon");
 	let ThisIsWhereAllTheCoolStuffHappens = document.getElementById("ThisIsWhereAllTheCoolStuffHappens");
-	let infoIcon = document.getElementById("infoIcon");
 
 	if (connected) {
 		connectionStatusIcon.src = "connected.svg";
 		ThisIsWhereAllTheCoolStuffHappens.classList.remove('disabled');
-		infoIcon.style.display = 'none';
+		SetElementVisibility("infoIcon", false);
+		SetElementVisibility("streamerbotConnectInstructions", false);
 	}
 	else {
 		connectionStatusIcon.src = "disconnected.svg";
 		ThisIsWhereAllTheCoolStuffHappens.classList.add('disabled');
-		infoIcon.style.display = 'inline';
+		SetElementVisibility("infoIcon", true);
+		SetElementVisibility("streamerbotConnectInstructions", true);
 
 		// (1) Clear list of broadcasts
 		const fieldsContainer = document.getElementById('fieldsContainer');
@@ -313,6 +369,15 @@ function UpdateBroadcastList(data) {
 	// {
 	// 	AddBroadcast(broadcast);
 	// }
+
+	// Count the number of YouTube broadcasts
+	// If this is 0, put a message to tell the user that they need to go live on YouTube first
+	// Else, hide that message
+	const youtubeBroadcastCount = data.broadcastList.reduce((count, broadcast) => count + (broadcast.platform === "youtube" ? 1 : 0), 0);
+	if (youtubeBroadcastCount <= 0)
+		SetElementVisibility("noYouTubeStreamsInstructions", true);
+	else
+		SetElementVisibility("noYouTubeStreamsInstructions", false);
 
 	RefreshAnimation();
 }
