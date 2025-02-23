@@ -7,7 +7,7 @@ let sbDebugMode = true;
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 
-const sbServerPort = urlParams.get("port") || 8080;
+const sbServerPort = urlParams.get("port") || 8085;
 const sbServerAddress = urlParams.get("server") || "127.0.0.1";
 
 /////////////////
